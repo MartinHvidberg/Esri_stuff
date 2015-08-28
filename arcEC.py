@@ -1,7 +1,10 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import arcpy
 import sys
 
-## Version 1.8 (8 functions) '130213/MaHvi
+## Version 1.9 '150828/MaHvi
 
 def SetMsg(msg, severity=0): # 0:Message, 1:Warning, 2:Error
     #print msg
@@ -105,6 +108,19 @@ def Dict2String(dicIn):
     for K in lstK:
         strReport += str(K)+" : "+str(dicIn[K])+"\n"
     return strReport
+
+def encodeIfUnicode(strval):
+    """Encode if string is unicode."""
+    if isinstance(strval, unicode):
+        return strval.encode('ISO-8859-1')
+    return str(strval)
+
+def encodeIfUnicodeAndaoe(strval):
+    """Encode if string is unicode."""
+    if isinstance(strval, unicode):
+        return strval.encode('ISO-8859-1').replace('\xe6','ae').replace('\xf8','oe').replace('\xe5','aa').replace('\xd8','OE')
+    return str(strval)
+
 
 
 # Music that accompanied the coding of this script:
