@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import arcpy
 import sys
+import os
 
-## Version 1.9 '150828/MaHvi
+import arcpy
 
-def SetMsg(msg, severity=0): # 0:Message, 1:Warning, 2:Error
-    #print msg
+## Version 1.11 '150831/MaHvi
+
+def SetMsg(msg, severity=0, fil_log=False): # 0:Message, 1:Warning, 2:Error
     try:
+        print msg
         for string in msg.split('\n'):
             string = ":) "+string
             if severity == 0:
@@ -17,6 +19,10 @@ def SetMsg(msg, severity=0): # 0:Message, 1:Warning, 2:Error
                 arcpy.AddWarning(string)
             elif severity == 2:
                 arcpy.AddError(string)
+    except:
+        pass
+    try:
+        fil_log.write(string+"\n")
     except:
         pass
     
@@ -109,6 +115,18 @@ def Dict2String(dicIn):
         strReport += str(K)+" : "+str(dicIn[K])+"\n"
     return strReport
 
+def is_FC_editable(FC):
+    """ Only if the FC is in a Edit session can we work with multiple Update cursors on it """
+    try:
+        upCursor1 = arcpy.da.UpdateCursor(FC,'*')
+        upCursor2 = arcpy.da.UpdateCursor(FC,'OBJECTID')
+        with upCursor2 as cursor:
+            for row in cursor:
+                pass    
+        return True
+    except:
+        return False
+
 def encodeIfUnicode(strval):
     """Encode if string is unicode."""
     if isinstance(strval, unicode):
@@ -121,7 +139,71 @@ def encodeIfUnicodeAndaoe(strval):
         return strval.encode('ISO-8859-1').replace('\xe6','ae').replace('\xf8','oe').replace('\xe5','aa').replace('\xd8','OE')
     return str(strval)
 
+def find_ws(path, ws_type=''):
+    """finds a valid workspace path for an arcpy.da.Editor() Session
 
+    Required:
+        path -- path to features or workspace
+
+    Optional:
+        ws_type -- option to find specific workspace type (FileSystem|LocalDatabase|RemoteDatabase)
+
+    """
+    # try original path first
+    if os.sep not in path:
+        path = arcpy.Describe(path).catalogPath
+    desc = arcpy.Describe(path)
+    if hasattr(desc, 'workspaceType'):
+        if ws_type and ws_type == desc.workspaceType:
+            return path
+        elif not ws_type:
+            return path
+
+    # search until finding a valid workspace
+    SPLIT = filter(None, path.split(os.sep))
+    if path.startswith('\\\\'):
+        SPLIT[0] = r'\\{0}'.format(SPLIT[0])
+
+    # find valid workspace
+    for i in xrange(1, len(SPLIT)):
+        sub_dir = os.sep.join(SPLIT[:-i])
+        desc = arcpy.Describe(sub_dir)
+        if hasattr(desc, 'workspaceType'):
+            if ws_type and ws_type == desc.workspaceType:
+                return sub_dir
+            elif not ws_type:
+                return sub_dir
+
+class ECUpdateCursor(object):
+    """wrapper class for arcpy.da.UpdateCursor, to automatically
+    implement editing (required for versioned data, and data with
+    geometric networks, topologies, network datasets, and relationship
+    classes"""
+    def __init__(self, *args, **kwargs):
+        """initiate wrapper class for update cursor.  Supported args:
+
+        in_table, field_names, where_clause=None, spatial_reference=None,
+        explode_to_points=False, sql_clause=(None, None)
+        """
+        self.args = args
+        self.kwargs = kwargs
+        self.edit = None
+
+    def __enter__(self):
+        ws = None
+        if self.args:
+            ws = find_ws(self.args[0])
+        elif 'in_table' in self.kwargs:
+            ws = find_ws(self.kwargs['in_table'])
+        self.edit = arcpy.da.Editor(ws)
+        self.edit.startEditing()
+        self.edit.startOperation()
+        return arcpy.da.UpdateCursor(*self.args, **self.kwargs)
+
+    def __exit__(self, type, value, traceback):
+        self.edit.stopOperation()
+        self.edit.stopEditing(True)
+        self.edit = None
 
 # Music that accompanied the coding of this script:
 #   Deep Forest - Savana Dance

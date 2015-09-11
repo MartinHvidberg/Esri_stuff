@@ -114,7 +114,7 @@ fil_log.write("Start time: "+str(tim_start)+"\n")
 fil_log.write("\n")
 # ** Out points file
 try:
-    fc_out = u"C:\\Martin\\redundant_vertexes.shp"
+    fc_out = u"C:\\Martin\\Work\\redundant_vertexes.shp"
     cur_pnt_out = arcpy.da.InsertCursor(fc_out, ["SHAPE@","source"])
 except:
     arcEC.SetMsg("Can't find output points file: "+fc_out,2)
@@ -131,26 +131,23 @@ for dirpath, dirnames, filenames in arcpy.da.Walk(str_ws, datatype="FeatureClass
             fil_log.write("\n*** "+str(filename)+"\n"+msg+"\n")
             arcEC.SetMsg(msg,0)
             pass # Don't process PLTS* feature classes
-        #=======================================================================
-        # elif filename[:15] != "TracksAndRoutes":
-        #     msg = "         Passed (TEST MODE)"
-        #     fil_log.write("\n*** "+str(filename)+"\n"+msg+"\n")
-        #     arcEC.SetMsg(msg,0)
-        #     pass
-        # elif filename[:4] == "Natu": # These featureclasses tend to be big
-        #     msg = "         Passed (Assumed too big)"
-        #     fil_log.write("\n*** "+str(filename)+"\n"+msg+"\n")
-        #     arcEC.SetMsg(msg,0)
-        #     pass
-        #=======================================================================
-        
+        elif False: #filename[:15] != "TracksAndRoutes":
+            msg = "         Passed (TEST MODE)"
+            fil_log.write("\n*** "+str(filename)+"\n"+msg+"\n")
+            arcEC.SetMsg(msg,0)
+            pass
+        elif filename[:4] == "Natu": # These featureclasses tend to be big
+            msg = "         Passed (Assumed too big)"
+            fil_log.write("\n*** "+str(filename)+"\n"+msg+"\n")
+            arcEC.SetMsg(msg,0)
+            pass        
         else:
             arcEC.SetMsg("    start "+str(datetime.now()),0)
             fil_log.write("\n*** "+str(filename)+"\n")
             obj_fc = os.path.join(dirpath, filename)
             fil_log.write("    fc : "+str(obj_fc)+"\n")
             # Run through the FC's rows
-            with arcpy.da.UpdateCursor(obj_fc, ["SHAPE@","OID@"]) as cursor:
+            with arcpy.da.SearchCursor(obj_fc, ["SHAPE@","OID@"]) as cursor:
                 for row in cursor:
                     fil_log.write(" ** oid: "+str(row[1])+"\n")
                     clean = Clean_Vertex_on_a_line(row)
